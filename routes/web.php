@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Controllers\Controller;
+use App\Http\Controllers\MainController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+use function Pest\Laravel\get;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -24,4 +28,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+Route::get('/api/daylightdata', [MainController::class, 'daylightdata']);
+
+require __DIR__ . '/auth.php';

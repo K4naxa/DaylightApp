@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-abstract class Controller
-{
-    //
-}
+use Illuminate\Support\Facades\Request;
+
+
+abstract class Controller {}
