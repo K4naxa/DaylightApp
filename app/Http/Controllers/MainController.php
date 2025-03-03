@@ -32,16 +32,12 @@ class MainController extends Controller
 
         for ($i = 0; $i < 365; $i++) {
 
+            // Get sun info for the date
             $timestamp = strtotime("+$i days", $startOfYear);
             $daylightInfo[$i] = date_sun_info($timestamp, $lat, $lon);
 
-            $data = date_sun_info(
-                $timestamp,
-                $lat,
-                $lon,
-            );
-
-            $daylightInfo = [...$daylightInfo, $data];
+            // add date to the object for easier handling in client
+            $daylightInfo[$i]['date'] = date('Y-m-d', $timestamp);
         }
 
 

@@ -1,6 +1,7 @@
 <script setup>
 import axios from "axios";
 import { ref, watch } from "vue";
+import DaylightChart from "../Components/DaylightChart.vue";
 
 const searchInput = ref("");
 const searchSuggestions = ref([]);
@@ -13,8 +14,12 @@ const handleLocationSelect = async (location) => {
     const daylightData = await getDaylightData(location.lat, location.lon);
     location = { ...location, daylightData };
 
-    selectedLocations.push(location);
+    selectedLocations.value.push(location);
     console.log(location);
+};
+
+const handleLocationRemove = (index) => {
+    selectedLocations.value.splice(index, 1);
 };
 const getDaylightData = async (lat, lon) => {
     try {
@@ -80,13 +85,17 @@ watch(searchInput, (newInput) => {
 </script>
 
 <template>
-    <div class="from-gray-800 to-gray-700 w-dvw h-dvh p-4">
-        <div class="my-auto max-w-md mx-auto">
+    <div
+        class="bg-gradient-to-b from-white to-gray-50 w-dvw h-dvh p-4 flex flex-col justify-center"
+    >
+        <div
+            class="max-w-5xl mx-auto w-full rounded-lg shadow-md border p-8 flex flex-grow-0 flex-col"
+        >
             <!-- Search section -->
-            <div class="relative">
+            <div class="relative flex justify-center">
                 <input
                     type="text"
-                    class="w-full rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     v-model="searchInput"
                     placeholder="Hae sijainti (englanniksi).."
                 />
@@ -94,7 +103,7 @@ watch(searchInput, (newInput) => {
                 <!-- Suggestions dropdown -->
                 <div
                     v-if="searchSuggestions.length > 0"
-                    class="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
+                    class="absolute z-10 w-full max-w-md mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                     <ul>
                         <li
@@ -119,39 +128,12 @@ watch(searchInput, (newInput) => {
                     </ul>
                 </div>
             </div>
-            <!-- Table for selected locations -->
-            <div>
-                <table class="table-auto mt-8 w-full">
-                    <thead class="bg-gray-300">
-                        <tr>
-                            <th>Nimi</th>
-                            <th>Maa</th>
-                            <th>Kaupunki</th>
-
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="location in selectedLocations"
-                            :key="location.lat"
-                        >
-                            <th>
-                                {{ location.name }}
-                            </th>
-
-                            <th>
-                                {{ location.country }}
-                            </th>
-                            <th>{{ location.city }}</th>
-
-                            <th>Poista</th>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
             <!-- grap for daytime -->
+
+            <DaylightChart
+                :locations="selectedLocations"
+                @removeLocation="handleLocationRemove"
+            />
         </div>
     </div>
 </template>
