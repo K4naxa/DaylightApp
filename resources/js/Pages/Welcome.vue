@@ -89,21 +89,22 @@ watch(searchInput, (newInput) => {
         class="bg-gradient-to-b from-white to-gray-50 w-dvw h-dvh p-4 flex flex-col justify-center"
     >
         <div
-            class="max-w-5xl mx-auto w-full rounded-lg shadow-md border p-8 flex flex-grow-0 flex-col"
+            class="max-w-5xl mx-auto w-full rounded-lg shadow-md border p-8 flex flex-grow-0 flex-col gap-8"
         >
+            <header class="text-center text-2xl">Vertaa päivänvaloa</header>
             <!-- Search section -->
             <div class="relative flex justify-center">
                 <input
                     type="text"
                     class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     v-model="searchInput"
-                    placeholder="Hae sijainti (englanniksi).."
+                    placeholder="Hae sijainti..."
                 />
 
                 <!-- Suggestions dropdown -->
                 <div
                     v-if="searchSuggestions.length > 0"
-                    class="absolute z-10 w-full max-w-md mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
+                    class="absolute z-10 w-full max-w-md mt-12 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                     <ul>
                         <li
