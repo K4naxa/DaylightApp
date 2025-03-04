@@ -1,108 +1,169 @@
 <script setup>
 import axios from "axios";
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import DaylightChart from "../Components/DaylightChart.vue";
 
+/**
+ * Location Search and Daylight Comparison Component
+ *
+ * Allows users to search for locations and compare daylight hours
+ * throughout the year using the DaylightChart component.
+ *
+ * Daylight information is received from laravel backend using cities500 database (cities that have greater population than 500)
+ */
+
+// UI state management
 const searchInput = ref("");
 const searchSuggestions = ref([]);
 const selectedLocations = ref([]);
 const locationInputError = ref("");
 const showSuggestions = ref(false);
+const isLoading = ref(false);
 
-// debounce, to handle call throttling
-let timeout = null;
+// Debounce control
+let debounceTimeout = null;
+const DEBOUNCE_DELAY = 300;
+const ERROR_DISPLAY_TIME = 5000;
 
-// Checks if location is new
-// Fetches daylightdata for new location
-// pushes the new location with daylightdata to selectedlocations array
+/**
+ * Adds a new location to the comparison chart
+ *
+ * @param {Object} location - Location object with name, latitude, and longitude
+ */
 const handleLocationSelect = async (location) => {
+    // Reset error state
     locationInputError.value = "";
 
-    // check for already matching location
-    if (
-        selectedLocations.value.some(
-            (oldLoc) =>
-                oldLoc.latitude === location.latitude &&
-                oldLoc.longitude === location.longitude
-        )
-    ) {
-        locationInputError.value = location.name + " on jo valittuna";
+    // Check if location is already selected
+    if (isLocationAlreadySelected(location)) {
+        locationInputError.value = `${location.name} on jo valittuna`;
         return;
     }
 
-    console.log("location lat, long: ", location.latitude, location.longitude);
-    // get daylightdata
-    const daylightData = await getDaylightData(
-        location.latitude,
-        location.longitude
-    );
+    try {
+        isLoading.value = true;
 
-    location = { ...location, daylightData };
+        // Fetch daylight data for the selected location
+        const daylightData = await getDaylightData(
+            location.latitude,
+            location.longitude
+        );
 
-    selectedLocations.value.push(location);
-    console.log(location);
+        // Add location with daylight data to selected locations
+        selectedLocations.value.push({
+            ...location,
+            daylightData,
+        });
+
+        // Clear search input and suggestions
+        searchInput.value = "";
+        searchSuggestions.value = [];
+    } catch (error) {
+        console.error("Error adding location:", error);
+        locationInputError.value = "Virhe lisättäessä sijaintia";
+    } finally {
+        isLoading.value = false;
+    }
 };
 
+/**
+ * Checks if a location is already in the selected locations list
+ *
+ * @param {Object} location - Location to check
+ * @returns {boolean} True if location is already selected
+ */
+const isLocationAlreadySelected = (location) => {
+    return selectedLocations.value.some(
+        (existingLocation) =>
+            existingLocation.latitude === location.latitude &&
+            existingLocation.longitude === location.longitude
+    );
+};
+
+/**
+ * Removes a location from the comparison chart
+ *
+ * @param {number} index - Index of the location to remove
+ */
 const handleLocationRemove = (index) => {
     selectedLocations.value.splice(index, 1);
 };
 
-// get daylight data from backend
-// returns only the received data
+/**
+ * Fetches daylight data for a specific location
+ * Gets the data from Laravels own date_sun_info function
+ *
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @returns {Promise<Array>} Daylight data for the location
+ */
 const getDaylightData = async (lat, lon) => {
-    console.log(lat, lon);
     try {
         const response = await axios.get("/api/daylightdata", {
-            params: {
-                lat: lat,
-                lon: lon,
-            },
+            params: { lat, lon },
         });
         return response.data;
     } catch (error) {
-        console.log("error getting daylightdata: ", error);
+        console.error("Error fetching daylight data:", error);
+        throw new Error("Failed to fetch daylight data");
     }
 };
 
-// remove the error message after 5 seconds
-watch(locationInputError, (newInput) => {
-    setTimeout(() => {
-        locationInputError.value = "";
-    }, 5000);
-});
-
-// watcher for handling new suggestion queries
-// watcher has 300ms debounce to throttle queries when user is typing fast and only makes query when user stops
-watch(searchInput, (newInput) => {
-    if (timeout) clearTimeout(timeout);
-
-    // Clear suggestions if input is empty
-    if (!newInput || newInput.length < 1) {
+/**
+ * Searches for location suggestions based on user input
+ *
+ * @param {string} query - Search query
+ */
+const searchLocations = async (query) => {
+    if (!query || query.length < 1) {
         searchSuggestions.value = [];
         return;
     }
 
-    // Set a new timeout to delay the API call
-    timeout = setTimeout(async () => {
-        try {
-            // Get suggestions and data from backend
-            const response = await axios.get(`/api/search`, {
-                params: {
-                    query: newInput,
-                },
-            });
+    try {
+        isLoading.value = true;
+        const response = await axios.get("/api/search", {
+            params: { query },
+        });
 
-            // Process the results
-            if (response.data) {
-                console.log(response.data);
-                searchSuggestions.value = response.data;
-            }
-        } catch (error) {
-            console.error("Error fetching location suggestions:", error);
+        if (response.data) {
+            searchSuggestions.value = response.data;
         }
-        console.log("searchSuggestions: ", searchSuggestions.value);
-    }, 300); // 300ms debounce
+    } catch (error) {
+        console.error("Error fetching location suggestions:", error);
+        searchSuggestions.value = [];
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Clear error message after timeout
+watch(locationInputError, (newError) => {
+    if (newError) {
+        setTimeout(() => {
+            locationInputError.value = "";
+        }, ERROR_DISPLAY_TIME);
+    }
 });
+
+// Debounced search for location suggestions
+watch(searchInput, (newInput) => {
+    // Clear any existing timeout
+    if (debounceTimeout) {
+        clearTimeout(debounceTimeout);
+    }
+
+    // Start new debounce timeout
+    debounceTimeout = setTimeout(() => {
+        searchLocations(newInput);
+    }, DEBOUNCE_DELAY);
+});
+
+// Computed properties for UI state
+const hasLocations = computed(() => selectedLocations.value.length > 0);
+const showSuggestionsDropdown = computed(
+    () => searchSuggestions.value.length > 0 && showSuggestions.value
+);
 </script>
 
 <template>
@@ -112,42 +173,57 @@ watch(searchInput, (newInput) => {
         <div
             class="max-w-5xl mx-auto my-auto w-full rounded-lg lg:shadow-md lg:border p-4 lg:p-8 flex flex-col gap-8"
         >
-            <header class="text-center text-2xl">Compare Daytime light</header>
-            <!-- Search section -->
+            <!-- Header -->
+            <header class="text-center text-2xl">Compare Daytime Light</header>
+
+            <!-- Search Section -->
             <div class="relative flex justify-center">
                 <div class="relative w-full flex justify-center">
+                    <!-- Search Input -->
                     <input
+                        type="text"
+                        v-model="searchInput"
                         @focus="showSuggestions = true"
                         @blur="showSuggestions = false"
-                        type="text"
-                        class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        v-model="searchInput"
+                        @keydown.enter.prevent="
+                            if (searchSuggestions.length > 0) {
+                                handleLocationSelect(searchSuggestions[0]);
+                            }
+                        "
+                        class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Hae kaupunki..."
                     />
-                    <span class="text-sm px-2 text-red-500 absolute">{{
-                        locationInputError
-                    }}</span>
+
+                    <!-- Loading Indicator -->
+                    <div
+                        v-if="isLoading"
+                        class="absolute right-4 top-1/2 transform -translate-y-1/2"
+                    >
+                        <div
+                            class="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"
+                        ></div>
+                    </div>
+
+                    <!-- Error Message -->
+                    <span
+                        v-if="locationInputError"
+                        class="text-sm px-2 text-red-500 absolute"
+                    >
+                        {{ locationInputError }}
+                    </span>
                 </div>
 
-                <!-- Suggestions dropdown -->
+                <!-- Suggestions Dropdown -->
                 <div
-                    v-if="searchSuggestions.length > 0 && showSuggestions"
+                    v-if="showSuggestionsDropdown"
                     class="absolute z-10 w-full max-w-md mt-12 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                     <ul>
                         <li
                             v-for="suggestion in searchSuggestions"
-                            :key="`${suggestion.lat}-${suggestion.lon}`"
+                            :key="`${suggestion.latitude}-${suggestion.longitude}`"
                             class="p-2 hover:bg-gray-100 cursor-pointer"
-                            @mousedown="
-                                () => {
-                                    // Clear search fields
-                                    searchInput = '';
-                                    searchSuggestions = [];
-                                    // place location to selectedLocations array
-                                    handleLocationSelect(suggestion);
-                                }
-                            "
+                            @mousedown="() => handleLocationSelect(suggestion)"
                         >
                             <div class="font-medium flex items-center gap-2">
                                 {{ suggestion.name }}
@@ -160,13 +236,18 @@ watch(searchInput, (newInput) => {
                     </ul>
                 </div>
             </div>
-            <!-- grap for daytime -->
 
+            <!-- Daylight Chart -->
             <DaylightChart
-                v-if="selectedLocations.length > 0"
+                v-if="hasLocations"
                 :locations="selectedLocations"
                 @removeLocation="handleLocationRemove"
             />
+
+            <!-- Empty State -->
+            <div v-else class="text-center text-gray-500 py-8">
+                Etsi kaupunkeja vertaillaksesi päivien pituuksia
+            </div>
         </div>
     </div>
 </template>
