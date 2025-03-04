@@ -215,6 +215,10 @@ const createChart = () => {
                 "Marras",
                 "Joulu",
             ];
+            // For small screens, only show first letter
+            if (width < 500) {
+                return months[d.getMonth()].charAt(0);
+            }
             return months[d.getMonth()];
         })
         .tickSize(5)
@@ -272,7 +276,8 @@ const createChart = () => {
                 .attr("stroke", colorScale(index))
                 .attr("stroke-width", 2)
                 .attr("opacity", 1)
-                .attr("d", line);
+                .attr("d", line)
+                .raise();
         // draw line bigger and fully opaque if location is hovered
         else if (hoveredLocation.value === index)
             svg.append("path")
@@ -282,7 +287,8 @@ const createChart = () => {
                 .attr("filter", "url(#line-shadow)") // Apply shadow
                 .attr("stroke-width", 3.5)
                 .attr("opacity", 1)
-                .attr("d", line);
+                .attr("d", line)
+                .raise();
         // make other lines have lesser opacity if other location is hovered
         else
             svg.append("path")
@@ -291,7 +297,8 @@ const createChart = () => {
                 .attr("stroke", colorScale(index))
                 .attr("stroke-width", 2)
                 .attr("opacity", 0.3)
-                .attr("d", line);
+                .attr("d", line)
+                .raise();
     });
 
     // Shadow for hovered location
@@ -342,10 +349,15 @@ const createChart = () => {
 
     // V3 -----------------------
 
-    const heatmapHeight = 30;
+    const heatmapHeight = 10;
     const heatmapSvg = svg
         .append("g")
-        .attr("transform", `translate(0, ${height - margin.bottom + 20})`);
+        .attr(
+            "transform",
+            `translate(0, ${height - margin.bottom - heatmapHeight})`
+        )
+        .attr("opacity", 1)
+        .lower();
 
     const intersectionCounts = {};
     intersections.value.forEach((point) => {
@@ -372,21 +384,27 @@ const createChart = () => {
         .join("rect")
         .attr("class", "heatmap-cell")
         .attr("x", (d) => xScale(d) - 1)
-        .attr("y", 0)
+        .attr("y", (d) => {
+            const dateKey = d.toISOString().split("T")[0];
+            const count = intersectionCounts[dateKey] || 0;
+            // Calculate height based on count, then position Y accordingly to align bottom
+            const barHeight =
+                count > 0 ? Math.min(count * 2, heatmapHeight) : 5; // Increased minimum height to 3
+            return heatmapHeight - barHeight;
+        })
         .attr("width", 2)
-        .attr("height", heatmapHeight)
+        .attr("height", (d) => {
+            const dateKey = d.toISOString().split("T")[0];
+            const count = intersectionCounts[dateKey] || 0;
+            // Return height based on count with increased minimum
+            return count > 0 ? Math.min(count * 2, heatmapHeight) : 5; // Increased minimum height to 3
+        })
         .attr("fill", (d) => {
             const dateKey = d.toISOString().split("T")[0];
             const count = intersectionCounts[dateKey] || 0;
-            return d3.interpolateReds(Math.min(count / 5, 1)); // Scale color by count
-        })
-        .append("title")
-        .text((d) => {
-            const dateKey = d.toISOString().split("T")[0];
-            const count = intersectionCounts[dateKey] || 0;
-            return count
-                ? `${formatDate(d)}: ${count} intersections`
-                : formatDate(d);
+            return count > 0
+                ? d3.interpolateReds(Math.min(count / 5, 1))
+                : "#fdfefe"; // White for no intersections
         });
 
     // CURRENTDATE LINE --------------------------------------------------
