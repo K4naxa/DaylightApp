@@ -1,7 +1,9 @@
 <script setup>
 import * as d3 from "d3";
-import { ref, onMounted, watch, computed, onUnmounted } from "vue";
+import { ref, onMounted, watch, computed, onUnmounted, reactive } from "vue";
 import TrashIcon from "../icons/TrashIcon.vue";
+import SunriseIcon from "../icons/SunriseIcon.vue";
+import SunsetIcon from "../icons/SunsetIcon.vue";
 // Define emit for event communication with parent component
 const emit = defineEmits(["removeLocation"]);
 
@@ -10,6 +12,14 @@ const props = defineProps({
         type: Array,
         required: true,
     },
+});
+
+// Add reactive tooltip data
+const tooltipData = reactive({
+    visible: false,
+    date: null,
+    locations: [],
+    position: { left: 0, top: 0 },
 });
 
 // Create a refs for chart and tooltip
@@ -133,25 +143,25 @@ const createChart = () => {
         .nice()
         .range([height - margin.bottom, margin.top]);
 
-    // Create axes (generates all ticks labes and lines)
+    // axes (generates all ticks labes and lines)
     const xAxis = d3.axisBottom(xScale).tickFormat(d3.timeFormat("%b")); // Show month abbreviations
 
     svg.append("g")
         .attr("transform", `translate(0, ${height - 50})`)
         .call(xAxis);
 
-    // Create and add y-axis
+    //  y-axis
     const yAxis = d3.axisLeft(yScale).tickFormat((d) => `${d}h`);
 
     svg.append("g").attr("transform", "translate(50, 0)").call(yAxis);
 
-    // Create line generator
+    // line generator
     const line = d3
         .line()
         .x((d) => xScale(d.date))
         .y((d) => yScale(d.hours));
 
-    // Add the line path
+    // line path
     processedData.value.forEach((location, index) => {
         svg.append("path")
             .datum(location.value)
@@ -161,15 +171,7 @@ const createChart = () => {
             .attr("d", line);
     });
 
-    // Add title
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", margin.top / 2)
-        .attr("text-anchor", "middle")
-        .style("font-size", "16px")
-        .text("Päivänvalon pituuksien vertaus");
-
-    // Add axis labels
+    // axis labels
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", height - 10)
@@ -217,8 +219,8 @@ const createChart = () => {
             // Find closest date in data
             const bisectDate = d3.bisector((d) => d.date).left;
 
-            // Collect data from all locations for this date
-            const tooltipData = processedData.value
+            // Collect data for tooltip
+            const locations = processedData.value
                 .map((location) => {
                     const index = bisectDate(location.value, hoveredDate);
                     const dataPoint = location.value[index];
@@ -238,67 +240,36 @@ const createChart = () => {
                 })
                 .filter((d) => d !== null);
 
-            if (tooltipData.length === 0) return;
+            if (locations.length === 0) return;
 
             // Update tooltip line position
-            const dateX = xScale(tooltipData[0].date);
+            const dateX = xScale(locations[0].date);
             tooltipLine.attr("x1", dateX).attr("x2", dateX).style("opacity", 1);
 
-            // Build tooltip HTML
-            let tooltipHtml = `<div class="font-bold mb-2">${formatDate(
-                tooltipData[0].date
-            )}</div>`;
+            // Update reactive data for Vue component
+            tooltipData.visible = true;
+            tooltipData.date = locations[0].date;
+            tooltipData.locations = locations;
 
-            tooltipData.forEach((data) => {
-                tooltipHtml += `
-                <div class="mb-1">
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 rounded-full mr-2" style="background-color: ${
-                            data.color
-                        }"></div>
-                        <span class="font-semibold">${data.name}</span>
-                    </div>
-                    <div class="ml-5">Päivänvaloa: ${data.hours.toFixed(
-                        1
-                    )}h</div>
-<div class="flex gap-2">
-                        <div class="ml-5 flex items-center"><SunriseIcon />  ${formatTime(
-                            data.sunrise
-                        )}</div>
-                    <div class="ml-5"><SunsetIcon/> ${formatTime(
-                        data.sunset
-                    )}</div></div>
-                </div>
-            `;
-            });
-
-            // Update tooltip content and position
-            const tooltip = d3
-                .select(tooltipRef.value)
-                .html(tooltipHtml)
-                .style("display", "block");
-
-            // Position tooltip, ensuring it stays within chart boundaries
-            const tooltipWidth = tooltipRef.value.offsetWidth;
-            const tooltipHeight = tooltipRef.value.offsetHeight;
+            // Calculate position
             const chartRect = chartRef.value.getBoundingClientRect();
+            const tooltipRect = tooltipRef.value.getBoundingClientRect();
 
-            let left = event.clientX - chartRect.left + 10;
-            if (left + tooltipWidth > chartRect.width) {
-                left = event.clientX - chartRect.left - tooltipWidth - 10;
+            let left = event.clientX - chartRect.left + 30;
+            if (left + tooltipRect.width > chartRect.width) {
+                left = event.clientX - chartRect.left - tooltipRect.width;
             }
 
-            let top = event.clientY - chartRect.top - tooltipHeight / 2;
+            let top = event.clientY - chartRect.top - tooltipRect.height / 2;
             if (top < 0) top = 5;
-            if (top + tooltipHeight > chartRect.height) {
-                top = chartRect.height - tooltipHeight - 5;
+            if (top + tooltipRect.height > chartRect.height) {
+                top = chartRect.height - tooltipRect.height - 5;
             }
 
-            tooltip.style("left", `${left}px`).style("top", `${top}px`);
+            tooltipData.position = { left, top };
         })
         .on("mouseleave", function () {
-            // Hide tooltip and line when mouse leaves chart
-            d3.select(tooltipRef.value).style("display", "none");
+            tooltipData.visible = false;
             tooltipLine.style("opacity", 0);
         });
 };
@@ -360,13 +331,54 @@ watch(
 
 <template>
     <div class="border rounded-md p-4 relative">
-        <div ref="chartRef" id="chart" class="w-full h-[400px]"></div>
+        <div
+            ref="chartRef"
+            id="chart"
+            class="w-full h-[400px]"
+            :class="selected"
+        ></div>
         <!-- Tooltip Element -->
         <div
             ref="tooltipRef"
-            class="tooltip absolute hidden p-2 bg-white border rounded shadow-lg z-10 pointer-events-none"
-            style="min-width: 150px"
-        />
+            class="tooltip absolute p-2 bg-white border rounded shadow-lg z-10 pointer-events-none"
+            :style="{
+                display: tooltipData.visible ? 'block' : 'none',
+                left: tooltipData.position.left + 'px',
+                top: tooltipData.position.top + 'px',
+                minWidth: '150px',
+            }"
+        >
+            <div v-if="tooltipData.date" class="font-bold mb-2">
+                {{ formatDate(tooltipData.date) }}
+            </div>
+
+            <div
+                v-for="(data, idx) in tooltipData.locations"
+                :key="idx"
+                class="mb-1"
+            >
+                <div class="flex items-center">
+                    <div
+                        class="w-3 h-3 rounded-full mr-2"
+                        :style="{ backgroundColor: data.color }"
+                    ></div>
+                    <span class="font-semibold">{{ data.name }}</span>
+                </div>
+                <div class="ml-5">
+                    Päivänvaloa: {{ data.hours.toFixed(1) }}h
+                </div>
+                <div class="flex gap-2">
+                    <div class="flex items-center">
+                        <SunriseIcon class="w-4 h-4 mr-1" />
+                        {{ formatTime(data.sunrise) }}
+                    </div>
+                    <div class="flex items-center">
+                        <SunsetIcon class="w-4 h-4 mr-1" />
+                        {{ formatTime(data.sunset) }}
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- List of locations with delete button -->
         <div class="flex gap-4 flex-wrap mx-10">
@@ -386,14 +398,6 @@ watch(
                 </div>
             </div>
         </div>
-
-        <!-- Fallback content if chart doesn't render -->
-        <div
-            v-if="!processedData.length"
-            class="flex w-52 items-center justify-center h-full absolute top-0 left-1/2 -translate-x-24"
-        >
-            <p class="text-gray-500">Ei valittuja sijainteja</p>
-        </div>
     </div>
 </template>
 
@@ -404,9 +408,10 @@ watch(
 
 .tooltip {
     font-size: 12px;
-    background-color: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ccc;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(16px);
+    border: 1px solid #ececec;
     max-width: 250px;
 }
 </style>

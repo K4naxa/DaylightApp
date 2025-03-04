@@ -132,6 +132,7 @@ watch(searchInput, (newInput) => {
             <!-- grap for daytime -->
 
             <DaylightChart
+                v-if="selectedLocations.length > 0"
                 :locations="selectedLocations"
                 @removeLocation="handleLocationRemove"
             />
