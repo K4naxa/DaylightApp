@@ -7,6 +7,7 @@ const searchInput = ref("");
 const searchSuggestions = ref([]);
 const selectedLocations = ref([]);
 const locationInputError = ref("");
+const showSuggestions = ref(false);
 
 // debounce, to handle call throttling
 let timeout = null;
@@ -116,6 +117,8 @@ watch(searchInput, (newInput) => {
             <div class="relative flex justify-center">
                 <div class="relative w-full flex justify-center">
                     <input
+                        @focus="showSuggestions = true"
+                        @blur="showSuggestions = false"
                         type="text"
                         class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         v-model="searchInput"
@@ -128,7 +131,7 @@ watch(searchInput, (newInput) => {
 
                 <!-- Suggestions dropdown -->
                 <div
-                    v-if="searchSuggestions.length > 0"
+                    v-if="searchSuggestions.length > 0 && showSuggestions"
                     class="absolute z-10 w-full max-w-md mt-12 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                     <ul>
@@ -136,7 +139,7 @@ watch(searchInput, (newInput) => {
                             v-for="suggestion in searchSuggestions"
                             :key="`${suggestion.lat}-${suggestion.lon}`"
                             class="p-2 hover:bg-gray-100 cursor-pointer"
-                            @click="
+                            @mousedown="
                                 () => {
                                     // Clear search fields
                                     searchInput = '';
