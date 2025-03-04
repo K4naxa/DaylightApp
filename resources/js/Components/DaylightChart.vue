@@ -257,6 +257,35 @@ const createChart = () => {
                 )} - ${d.hours.toFixed(1)}h`
         );
 
+    // CURRENTDATE LINE
+
+    // Add current date line
+    const currentDate = new Date();
+    if (currentDate >= dateExtent[0] && currentDate <= dateExtent[1]) {
+        const currentX = xScale(currentDate);
+
+        // Add vertical line for current date
+        svg.append("line")
+            .attr("class", "current-date-line current-date")
+            .attr("x1", currentX)
+            .attr("x2", currentX)
+            .attr("y1", margin.top)
+            .attr("y2", height - margin.bottom)
+            .attr("stroke", "#aaa") // distinctive color
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "5,3");
+
+        // Add label for current date
+        svg.append("text")
+            .attr("class", "current-date-label current-date")
+            .attr("x", currentX)
+            .attr("y", margin.top - 10)
+            .attr("text-anchor", "middle")
+            .attr("fill", "#aaa")
+            .style("font-size", "12px")
+            .style("font-weight", "bold")
+            .text("Tänään");
+    }
     // TOOLTIP ------------------------------------------------------
 
     // Add invisible overlay for tooltip
