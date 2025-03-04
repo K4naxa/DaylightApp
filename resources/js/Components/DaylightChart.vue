@@ -211,7 +211,7 @@ const createChart = () => {
             .call((g) =>
                 g
                     .selectAll(".tick line")
-                    .attr("stroke", "#e0e0e0")
+                    .attr("stroke", "#fff")
                     .attr("stroke-opacity", 0.7)
                     .attr("shape-rendering", "crispEdges")
             );

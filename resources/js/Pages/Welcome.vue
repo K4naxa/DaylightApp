@@ -171,10 +171,12 @@ const showSuggestionsDropdown = computed(
         class="bg-gradient-to-b from-gray-400 to-gray-500 min-h-screen min-w-screen lg:p-4 flex"
     >
         <div
-            class="max-w-5xl mx-auto my-auto w-full rounded-lg lg:shadow-md lg:border p-4 lg:p-8 flex flex-col gap-8 bg-gray-50 bg-opacity-60 drop-shadow-lg"
+            class="max-w-5xl mx-auto my-auto w-full rounded-lg lg:shadow-md lg:border p-4 lg:p-8 flex flex-col gap-8 bg-gray-50 bg-opacity-80 drop-shadow-lg"
         >
             <!-- Header -->
-            <header class="text-center text-2xl">Compare Daytime Light</header>
+            <header class="text-center text-xl">
+                Päivien pituuksien vertailu
+            </header>
 
             <!-- Search Section -->
             <div class="relative flex justify-center">
@@ -190,7 +192,7 @@ const showSuggestionsDropdown = computed(
                                 handleLocationSelect(searchSuggestions[0]);
                             }
                         "
-                        class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        class="w-full max-w-md rounded-md border-gray-300 bg-gray-50 p-2 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Hae kaupunki..."
                     />
 
@@ -216,7 +218,7 @@ const showSuggestionsDropdown = computed(
                 <!-- Suggestions Dropdown -->
                 <div
                     v-if="showSuggestionsDropdown"
-                    class="absolute z-10 w-full max-w-md mt-12 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto"
+                    class="absolute z-10 w-full max-w-md mt-12 bg-white bg-opacity-90 backdrop-blur-md rounded-md shadow-lg max-h-60 overflow-y-auto"
                 >
                     <ul>
                         <li
