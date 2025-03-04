@@ -671,7 +671,12 @@ watch(
                 {{ location.name }}
 
                 <div
-                    @click.prevent="$emit('removeLocation', index)"
+                    @click.prevent="
+                        () => {
+                            $emit('removeLocation', index);
+                            hoveredLocation = null;
+                        }
+                    "
                     class="deleteLocationButton"
                 >
                     <TrashIcon />
