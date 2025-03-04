@@ -213,6 +213,7 @@ const createChart = () => {
                 .datum(location.value)
                 .attr("fill", "none")
                 .attr("stroke", colorScale(index))
+                .attr("filter", "url(#line-shadow)") // Apply shadow
                 .attr("stroke-width", 3.5)
                 .attr("opacity", 1)
                 .attr("d", line);
@@ -226,6 +227,17 @@ const createChart = () => {
                 .attr("opacity", 0.3)
                 .attr("d", line);
     });
+
+    // Shadow for hovered location
+    svg.append("defs")
+        .append("filter")
+        .attr("id", "line-shadow")
+        .append("feDropShadow")
+        .attr("dx", 0)
+        .attr("dy", 1)
+        .attr("stdDeviation", 2)
+        .attr("flood-color", "rgba(0,0,0,0.3)")
+        .attr("flood-opacity", 0.5);
 
     // axis labels
     svg.append("text")
