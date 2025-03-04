@@ -243,7 +243,7 @@ const createChart = () => {
 
     // INTERESECTIONS -------------------------------------------
     svg.selectAll(".intersection-point")
-        .data(intersections)
+        .data(intersections.value)
         .join("circle")
         .attr("class", "intersection-point")
         .attr("cx", (d) => xScale(d.date))
