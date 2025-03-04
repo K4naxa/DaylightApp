@@ -86,28 +86,65 @@ const processedData = computed(() => {
 });
 
 // Intersections value to keep track of and show to user
+// returns an array of
 const intersections = computed(() => {
     const result = [];
 
-    for (let i = 0; i < processedData.value.length - 1; i++) {
-        for (let j = i + 1; j < processedData.value.length; j++) {
-            const loc1 = processedData.value[i];
-            const loc2 = processedData.value[j];
+    // If there are fewer than 2 locations, no intersections are possible
+    if (processedData.value.length < 2) {
+        return result;
+    }
 
-            // For each day, check hours
-            loc1.value.forEach((day1, idx) => {
-                if (idx < loc2.value.length) {
-                    const day2 = loc2.value[idx];
-                    // Threshold for intersection set at 6 minutes
-                    if (Math.abs(day1.hours - day2.hours) < 0.1) {
-                        result.push({
-                            date: day1.date,
-                            hours: day1.hours,
-                            locations: [loc1.name, loc2.name],
-                        });
-                    }
-                }
+    // Get all unique dates across all locations
+    const dateMap = new Map();
+
+    processedData.value.forEach((location) => {
+        location.value.forEach((day) => {
+            const dateKey = day.date.toISOString().split("T")[0];
+            if (!dateMap.has(dateKey)) {
+                dateMap.set(dateKey, []);
+            }
+            dateMap.get(dateKey).push({
+                location: location.name,
+                hours: day.hours,
+                date: day.date,
             });
+        });
+    });
+
+    // Check each date if all locations have data for that day
+    for (const [dateKey, entries] of dateMap) {
+        // Only process dates where all locations have data
+        if (entries.length === processedData.value.length) {
+            // Find min and max daylight hours for this date
+            const hours = entries.map((e) => e.hours);
+            const minHours = Math.min(...hours);
+            const maxHours = Math.max(...hours);
+            const diff = maxHours - minHours;
+
+            // Determine score based on difference
+            let score = 0;
+            if (diff < 0.167) {
+                // Less than 10 minutes (0.167 hours)
+                score = 3;
+            } else if (diff < 0.333) {
+                // Less than 20 minutes (0.333 hours)
+                score = 2;
+            } else if (diff < 0.5) {
+                // Less than 30 minutes (0.5 hours)
+                score = 1;
+            }
+
+            // Only add to result if there's a score (meaning difference is under 30 min)
+            if (score > 0) {
+                result.push({
+                    date: entries[0].date,
+                    hours: (minHours + maxHours) / 2, // Average hours
+                    locations: entries.map((e) => e.location),
+                    difference: diff,
+                    score: score,
+                });
+            }
         }
     }
 
@@ -333,9 +370,7 @@ const createChart = () => {
     });
 
     // Add vertical bands for days with intersections
-
-    // V1 -----------------------
-
+    //  colors based on the score of intersection
     svg.selectAll(".intersection-band")
         .data(Object.keys(intersectionDates))
         .join("rect")
@@ -344,12 +379,17 @@ const createChart = () => {
         .attr("y", margin.top)
         .attr("width", 10)
         .attr("height", height - margin.top - margin.bottom)
-        .attr("fill", "rgba(255, 230, 230, 0.1)")
+        .attr("fill", (dateKey) => {
+            // Get highest score for this date
+            const maxScore = Math.max(
+                ...intersectionDates[dateKey].map((d) => d.score)
+            );
+            // Color based on score (1-3)
+            return `rgba(255, 230, 230, ${maxScore * 0.1})`;
+        })
         .attr("stroke", "none");
 
-    // V3 -----------------------
-
-    const heatmapHeight = 10;
+    const heatmapHeight = 15;
     const heatmapSvg = svg
         .append("g")
         .attr(
@@ -359,10 +399,26 @@ const createChart = () => {
         .attr("opacity", 1)
         .lower();
 
-    const intersectionCounts = {};
+    // Process intersection data for heatmap
+    const heatmapData = {};
     intersections.value.forEach((point) => {
         const dateKey = point.date.toISOString().split("T")[0];
-        intersectionCounts[dateKey] = (intersectionCounts[dateKey] || 0) + 1;
+        if (!heatmapData[dateKey]) {
+            heatmapData[dateKey] = {
+                date: point.date,
+                score: point.score,
+                locations: point.locations,
+                difference: point.difference,
+            };
+        } else if (point.score > heatmapData[dateKey].score) {
+            // Keep the intersection with the highest score
+            heatmapData[dateKey] = {
+                date: point.date,
+                score: point.score,
+                locations: point.locations,
+                difference: point.difference,
+            };
+        }
     });
 
     // Get all dates for the full year
@@ -377,35 +433,38 @@ const createChart = () => {
         allDaysOfYear.push(new Date(d));
     }
 
-    // Create heat map cells
-    heatmapSvg
+    // Create heat map cells with enhanced tooltips
+    const heatmapCells = heatmapSvg
         .selectAll(".heatmap-cell")
         .data(allDaysOfYear)
         .join("rect")
         .attr("class", "heatmap-cell")
-        .attr("x", (d) => xScale(d) - 1)
+        .attr("x", (d) => xScale(d) - 1.5)
         .attr("y", (d) => {
             const dateKey = d.toISOString().split("T")[0];
-            const count = intersectionCounts[dateKey] || 0;
-            // Calculate height based on count, then position Y accordingly to align bottom
-            const barHeight =
-                count > 0 ? Math.min(count * 2, heatmapHeight) : 5; // Increased minimum height to 3
+            const data = heatmapData[dateKey];
+            const score = data ? data.score : 0;
+            // Use score directly for height calculation
+            const barHeight = score > 0 ? score * 5 : 2;
             return heatmapHeight - barHeight;
         })
-        .attr("width", 2)
+        .attr("width", 3)
         .attr("height", (d) => {
             const dateKey = d.toISOString().split("T")[0];
-            const count = intersectionCounts[dateKey] || 0;
-            // Return height based on count with increased minimum
-            return count > 0 ? Math.min(count * 2, heatmapHeight) : 5; // Increased minimum height to 3
+            const data = heatmapData[dateKey];
+            const score = data ? data.score : 0;
+            // Use score directly for height
+            return score > 0 ? score * 5 : 2;
         })
         .attr("fill", (d) => {
             const dateKey = d.toISOString().split("T")[0];
-            const count = intersectionCounts[dateKey] || 0;
-            return count > 0
-                ? d3.interpolateReds(Math.min(count / 5, 1))
-                : "#fdfefe"; // White for no intersections
-        });
+            const data = heatmapData[dateKey];
+            const score = data ? data.score : 0;
+            // Color intensity based on score
+            return score > 0 ? d3.interpolateReds(score / 3) : "#fdfefe"; // White for no intersections
+        })
+        .attr("rx", 1) // Rounded corners for aesthetics
+        .attr("ry", 1);
 
     // CURRENTDATE LINE --------------------------------------------------
 
