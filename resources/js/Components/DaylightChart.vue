@@ -315,23 +315,79 @@ const createChart = () => {
         .text("Valoisaa");
 
     // INTERESECTIONS -------------------------------------------
-    svg.selectAll(".intersection-point")
-        .data(intersections.value)
-        .join("circle")
-        .attr("class", "intersection-point")
-        .attr("cx", (d) => xScale(d.date))
-        .attr("cy", (d) => yScale(d.hours))
-        .attr("r", 5)
-        .attr("fill", "red")
-        .attr("stroke", "white")
-        .attr("stroke-width", 2)
-        .append("title") // Simple tooltip
-        .text(
-            (d) =>
-                `${formatDate(d.date)}: ${d.locations.join(
-                    " & "
-                )} - ${d.hours.toFixed(1)}h`
-        );
+    // Group intersections by date
+    const intersectionDates = {};
+    intersections.value.forEach((point) => {
+        const dateKey = point.date.toISOString().split("T")[0];
+        if (!intersectionDates[dateKey]) {
+            intersectionDates[dateKey] = [];
+        }
+        intersectionDates[dateKey].push(point);
+    });
+
+    // Add vertical bands for days with intersections
+
+    // V1 -----------------------
+
+    svg.selectAll(".intersection-band")
+        .data(Object.keys(intersectionDates))
+        .join("rect")
+        .attr("class", "intersection-band")
+        .attr("x", (dateKey) => xScale(new Date(dateKey)) - 5)
+        .attr("y", margin.top)
+        .attr("width", 10)
+        .attr("height", height - margin.top - margin.bottom)
+        .attr("fill", "rgba(255, 230, 230, 0.1)")
+        .attr("stroke", "none");
+
+    // V3 -----------------------
+
+    const heatmapHeight = 30;
+    const heatmapSvg = svg
+        .append("g")
+        .attr("transform", `translate(0, ${height - margin.bottom + 20})`);
+
+    const intersectionCounts = {};
+    intersections.value.forEach((point) => {
+        const dateKey = point.date.toISOString().split("T")[0];
+        intersectionCounts[dateKey] = (intersectionCounts[dateKey] || 0) + 1;
+    });
+
+    // Get all dates for the full year
+    const allDaysOfYear = [];
+    const startDate = new Date(dateExtent[0]);
+    const endDate = new Date(dateExtent[1]);
+    for (
+        let d = new Date(startDate);
+        d <= endDate;
+        d.setDate(d.getDate() + 1)
+    ) {
+        allDaysOfYear.push(new Date(d));
+    }
+
+    // Create heat map cells
+    heatmapSvg
+        .selectAll(".heatmap-cell")
+        .data(allDaysOfYear)
+        .join("rect")
+        .attr("class", "heatmap-cell")
+        .attr("x", (d) => xScale(d) - 1)
+        .attr("y", 0)
+        .attr("width", 2)
+        .attr("height", heatmapHeight)
+        .attr("fill", (d) => {
+            const dateKey = d.toISOString().split("T")[0];
+            const count = intersectionCounts[dateKey] || 0;
+            return d3.interpolateReds(Math.min(count / 5, 1)); // Scale color by count
+        })
+        .append("title")
+        .text((d) => {
+            const dateKey = d.toISOString().split("T")[0];
+            const count = intersectionCounts[dateKey] || 0;
+            return count
+                ? `${formatDate(d)}: ${count} intersections`
+                : formatDate(d);
+        });
 
     // CURRENTDATE LINE --------------------------------------------------
 
