@@ -397,8 +397,8 @@ watch(
         <div
             ref="tooltipRef"
             class="tooltip absolute p-2 bg-white border rounded shadow-lg z-10 pointer-events-none"
+            :class="{ 'tooltip-visible': tooltipData.visible }"
             :style="{
-                display: tooltipData.visible ? 'block' : 'none',
                 left: tooltipData.position.left + 'px',
                 top: tooltipData.position.top + 'px',
                 minWidth: '150px',
@@ -471,5 +471,15 @@ watch(
     backdrop-filter: blur(16px);
     border: 1px solid #ececec;
     max-width: 250px;
+
+    /* Add these for smooth transitions */
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.tooltip-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 </style>
