@@ -130,7 +130,7 @@ const formatDate = (date) => {
 // Chart dimensions
 let width = 0;
 const height = 400;
-const margin = { top: 50, right: 50, bottom: 50, left: 50 };
+const margin = { top: 20, right: 20, bottom: 50, left: 50 };
 
 // Color scale setup for multiple locations
 const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
@@ -571,7 +571,7 @@ watch(
 </script>
 
 <template>
-    <div class="border rounded-md p-4 relative">
+    <div class="lg:p-4 relative">
         <div ref="chartRef" id="chart" class="w-full h-[400px]"></div>
         <!-- Tooltip Element -->
         <div
