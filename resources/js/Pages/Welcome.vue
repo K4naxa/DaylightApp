@@ -168,10 +168,10 @@ const showSuggestionsDropdown = computed(
 
 <template>
     <div
-        class="bg-gradient-to-b from-white to-gray-50 h-screen w-screen lg:p-4 flex"
+        class="bg-gradient-to-b from-gray-400 to-gray-500 min-h-screen min-w-screen lg:p-4 flex"
     >
         <div
-            class="max-w-5xl mx-auto my-auto w-full rounded-lg lg:shadow-md lg:border p-4 lg:p-8 flex flex-col gap-8"
+            class="max-w-5xl mx-auto my-auto w-full rounded-lg lg:shadow-md lg:border p-4 lg:p-8 flex flex-col gap-8 bg-gray-50 bg-opacity-60 drop-shadow-lg"
         >
             <!-- Header -->
             <header class="text-center text-2xl">Compare Daytime Light</header>

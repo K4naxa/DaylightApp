@@ -665,7 +665,7 @@ watch(
                 :key="index"
                 @mouseover="hoveredLocation = index"
                 @mouseleave="hoveredLocation = null"
-                class="rounded-full border py-1 px-4 select-none flex relative"
+                class="rounded-full border py-1 px-4 select-none flex relative bg-gray-50 bg-opacity-50 backdrop-blur-md shadow-md"
                 :style="{ borderColor: colorScale(index) }"
             >
                 {{ location.name }}
