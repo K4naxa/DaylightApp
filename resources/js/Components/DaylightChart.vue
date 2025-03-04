@@ -150,7 +150,6 @@ const formatTime = (date) => {
  */
 const createChart = () => {
     if (!chartRef.value) {
-        console.error("Chart container reference is null");
         return;
     }
 
@@ -351,6 +350,7 @@ const createChart = () => {
             .attr("x", (dateKey) => xScale(new Date(dateKey)) - 5)
             .attr("y", margin.top)
             .attr("width", 10)
+            .lower()
             .attr("height", height - margin.top - margin.bottom)
             .attr("fill", (dateKey) => {
                 const maxScore = Math.max(
