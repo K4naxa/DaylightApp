@@ -25,6 +25,7 @@ const tooltipData = reactive({
 // Create a refs for chart and tooltip
 const chartRef = ref(null);
 const tooltipRef = ref(null);
+const hoveredLocation = ref(null);
 
 // Process the data for visualization
 const processedData = computed(() => {
@@ -83,6 +84,36 @@ const processedData = computed(() => {
             .filter((location) => location.value.length > 0)
     );
 });
+
+// Intersections value to keep track of and show to user
+const intersections = computed(() => {
+    const result = [];
+
+    for (let i = 0; i < processedData.value.length - 1; i++) {
+        for (let j = i + 1; j < processedData.value.length; j++) {
+            const loc1 = processedData.value[i];
+            const loc2 = processedData.value[j];
+
+            // For each day, check hours
+            loc1.value.forEach((day1, idx) => {
+                if (idx < loc2.value.length) {
+                    const day2 = loc2.value[idx];
+                    // Threshold for intersection set at 6 minutes
+                    if (Math.abs(day1.hours - day2.hours) < 0.1) {
+                        result.push({
+                            date: day1.date,
+                            hours: day1.hours,
+                            locations: [loc1.name, loc2.name],
+                        });
+                    }
+                }
+            });
+        }
+    }
+
+    return result;
+});
+
 // Format time function for tooltip
 const formatTime = (date) => {
     if (!date) return "24h daylight/darkness";
@@ -103,6 +134,7 @@ const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
 // Function to create or update the chart
 const createChart = () => {
+    // Throw error if chart is not found
     if (!chartRef.value) {
         console.error("Chart container reference is null");
         return;
@@ -161,14 +193,35 @@ const createChart = () => {
         .x((d) => xScale(d.date))
         .y((d) => yScale(d.hours));
 
-    // line path
+    // create line paths
     processedData.value.forEach((location, index) => {
-        svg.append("path")
-            .datum(location.value)
-            .attr("fill", "none")
-            .attr("stroke", colorScale(index))
-            .attr("stroke-width", 2)
-            .attr("d", line);
+        // draw lines normally if no location is hovered
+        if (!hoveredLocation.value)
+            svg.append("path")
+                .datum(location.value)
+                .attr("fill", "none")
+                .attr("stroke", colorScale(index))
+                .attr("stroke-width", 2)
+                .attr("opacity", 1)
+                .attr("d", line);
+        // draw line bigger and fully opaque if location is hovered
+        else if (hoveredLocation.value === index)
+            svg.append("path")
+                .datum(location.value)
+                .attr("fill", "none")
+                .attr("stroke", colorScale(index))
+                .attr("stroke-width", 3.5)
+                .attr("opacity", 1)
+                .attr("d", line);
+        // make other lines have lesser opacity if other location is hovered
+        else
+            svg.append("path")
+                .datum(location.value)
+                .attr("fill", "none")
+                .attr("stroke", colorScale(index))
+                .attr("stroke-width", 2)
+                .attr("opacity", 0.3)
+                .attr("d", line);
     });
 
     // axis labels
@@ -185,7 +238,26 @@ const createChart = () => {
         .attr("text-anchor", "middle")
         .text("Tuntia päivänvaloa");
 
-    // TOOLTIP
+    // INTERESECTIONS -------------------------------------------
+    svg.selectAll(".intersection-point")
+        .data(intersections)
+        .join("circle")
+        .attr("class", "intersection-point")
+        .attr("cx", (d) => xScale(d.date))
+        .attr("cy", (d) => yScale(d.hours))
+        .attr("r", 5)
+        .attr("fill", "red")
+        .attr("stroke", "white")
+        .attr("stroke-width", 2)
+        .append("title") // Simple tooltip
+        .text(
+            (d) =>
+                `${formatDate(d.date)}: ${d.locations.join(
+                    " & "
+                )} - ${d.hours.toFixed(1)}h`
+        );
+
+    // TOOLTIP ------------------------------------------------------
 
     // Add invisible overlay for tooltip
     const overlay = svg
@@ -255,11 +327,12 @@ const createChart = () => {
             const chartRect = chartRef.value.getBoundingClientRect();
             const tooltipRect = tooltipRef.value.getBoundingClientRect();
 
+            // Compare event location to chart cotnainers left wall
             let left = event.clientX - chartRect.left + 30;
             if (left + tooltipRect.width > chartRect.width) {
                 left = event.clientX - chartRect.left - tooltipRect.width;
             }
-
+            // Compare event location height to chart container top wall and divide to center
             let top = event.clientY - chartRect.top - tooltipRect.height / 2;
             if (top < 0) top = 5;
             if (top + tooltipRect.height > chartRect.height) {
@@ -305,21 +378,9 @@ onUnmounted(() => {
     }
 });
 
-// Watch for changes in locations prop
-watch(
-    () => props.locations,
-    (newLocations) => {
-        console.log("Locations updated:", newLocations);
-        if (newLocations.length > 0) {
-            createChart();
-        }
-    },
-    { deep: true }
-);
-
 // Watch for changes in processed data
 watch(
-    processedData,
+    [processedData, hoveredLocation],
     (newData) => {
         if (newData.length > 0) {
             createChart();
@@ -331,12 +392,7 @@ watch(
 
 <template>
     <div class="border rounded-md p-4 relative">
-        <div
-            ref="chartRef"
-            id="chart"
-            class="w-full h-[400px]"
-            :class="selected"
-        ></div>
+        <div ref="chartRef" id="chart" class="w-full h-[400px]"></div>
         <!-- Tooltip Element -->
         <div
             ref="tooltipRef"
@@ -385,6 +441,8 @@ watch(
             <div
                 v-for="(location, index) in processedData"
                 :key="index"
+                @mouseover="hoveredLocation = index"
+                @mouseleave="hoveredLocation = null"
                 class="rounded-full border py-1 px-4 select-none flex relative"
                 :style="{ borderColor: colorScale(index) }"
             >

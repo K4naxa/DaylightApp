@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Controller;
-use App\Http\Controllers\MainController;
+use App\Http\Controllers\CityController;
+use App\Http\Controllers\DaylightController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +28,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-Route::get('/api/daylightdata', [MainController::class, 'daylightdata']);
+
+// API Calls to backend
+Route::prefix('/api')->group(function () {
+    Route::get('/daylightdata', [DaylightController::class, 'daylightdata']);
+    Route::get('/search', [CityController::class, 'search'])->name('search');
+});
 
 require __DIR__ . '/auth.php';

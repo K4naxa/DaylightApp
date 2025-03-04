@@ -6,12 +6,36 @@ import DaylightChart from "../Components/DaylightChart.vue";
 const searchInput = ref("");
 const searchSuggestions = ref([]);
 const selectedLocations = ref([]);
+const locationInputError = ref("");
 
 // debounce, to handle call throttling
 let timeout = null;
 
+// Checks if location is new
+// Fetches daylightdata for new location
+// pushes the new location with daylightdata to selectedlocations array
 const handleLocationSelect = async (location) => {
-    const daylightData = await getDaylightData(location.lat, location.lon);
+    locationInputError.value = "";
+
+    // check for already matching location
+    if (
+        selectedLocations.value.some(
+            (oldLoc) =>
+                oldLoc.latitude === location.latitude &&
+                oldLoc.longitude === location.longitude
+        )
+    ) {
+        locationInputError.value = location.name + " on jo valittuna";
+        return;
+    }
+
+    console.log("location lat, long: ", location.latitude, location.longitude);
+    // get daylightdata
+    const daylightData = await getDaylightData(
+        location.latitude,
+        location.longitude
+    );
+
     location = { ...location, daylightData };
 
     selectedLocations.value.push(location);
@@ -21,7 +45,11 @@ const handleLocationSelect = async (location) => {
 const handleLocationRemove = (index) => {
     selectedLocations.value.splice(index, 1);
 };
+
+// get daylight data from backend
+// returns only the received data
 const getDaylightData = async (lat, lon) => {
+    console.log(lat, lon);
     try {
         const response = await axios.get("/api/daylightdata", {
             params: {
@@ -35,6 +63,15 @@ const getDaylightData = async (lat, lon) => {
     }
 };
 
+// remove the error message after 5 seconds
+watch(locationInputError, (newInput) => {
+    setTimeout(() => {
+        locationInputError.value = "";
+    }, 5000);
+});
+
+// watcher for handling new suggestion queries
+// watcher has 300ms debounce to throttle queries when user is typing fast and only makes query when user stops
 watch(searchInput, (newInput) => {
     if (timeout) clearTimeout(timeout);
 
@@ -47,39 +84,22 @@ watch(searchInput, (newInput) => {
     // Set a new timeout to delay the API call
     timeout = setTimeout(async () => {
         try {
-            // Get suggestions and data from photon komoot api
-            const response = await axios.get(`https://photon.komoot.io/api/`, {
+            // Get suggestions and data from backend
+            const response = await axios.get(`/api/search`, {
                 params: {
-                    q: newInput,
-                    limit: 5,
-                    lang: "en",
+                    query: newInput,
                 },
             });
 
             // Process the results
-            if (response.data && response.data.features) {
-                searchSuggestions.value = response.data.features.map(
-                    (feature) => ({
-                        name: feature.properties.name,
-                        city:
-                            feature.properties.city || feature.properties.name,
-                        state: feature.properties.state,
-                        country: feature.properties.country,
-                        lat: feature.geometry.coordinates[1],
-                        lon: feature.geometry.coordinates[0],
-                        fullName: [
-                            feature.properties.name,
-                            feature.properties.state,
-                            feature.properties.country,
-                        ]
-                            .filter(Boolean)
-                            .join(", "),
-                    })
-                );
+            if (response.data) {
+                console.log(response.data);
+                searchSuggestions.value = response.data;
             }
         } catch (error) {
             console.error("Error fetching location suggestions:", error);
         }
+        console.log("searchSuggestions: ", searchSuggestions.value);
     }, 300); // 300ms debounce
 });
 </script>
@@ -94,12 +114,17 @@ watch(searchInput, (newInput) => {
             <header class="text-center text-2xl">Vertaa päivänvaloa</header>
             <!-- Search section -->
             <div class="relative flex justify-center">
-                <input
-                    type="text"
-                    class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    v-model="searchInput"
-                    placeholder="Hae sijainti..."
-                />
+                <div class="relative w-full flex justify-center">
+                    <input
+                        type="text"
+                        class="w-full max-w-md rounded-md border-gray-300 p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        v-model="searchInput"
+                        placeholder="Hae kaupunki..."
+                    />
+                    <span class="text-sm px-2 text-red-500 absolute">{{
+                        locationInputError
+                    }}</span>
+                </div>
 
                 <!-- Suggestions dropdown -->
                 <div
@@ -121,9 +146,12 @@ watch(searchInput, (newInput) => {
                                 }
                             "
                         >
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-600">
-                                {{ suggestion.fullName }}
+                            <div class="font-medium flex items-center gap-2">
+                                {{ suggestion.name }}
+                                <span class="text-xs text-gray-600">
+                                    {{ suggestion.country }}
+                                    {{ suggestion.region }}
+                                </span>
                             </div>
                         </li>
                     </ul>

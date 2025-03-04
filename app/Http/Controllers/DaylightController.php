@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-class MainController extends Controller
+class DaylightController extends Controller
 {
     public function daylightdata(Request $request)
     {
