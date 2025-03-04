@@ -342,23 +342,22 @@ const createChart = () => {
 
         // Add vertical line for current date
         svg.append("line")
-            .attr("class", "current-date-line current-date")
+            .attr("class", "current-date-line")
             .attr("x1", currentX)
             .attr("x2", currentX)
             .attr("y1", margin.top)
             .attr("y2", height - margin.bottom)
             .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "5,3");
+            .attr("opacity", 0.55)
+            .attr("stroke-width", 1.3);
 
-        // Add label for current date
         svg.append("text")
-            .attr("class", "current-date-label current-date")
+            .attr("class", "current-date-label")
             .attr("x", currentX)
             .attr("y", margin.top - 10)
             .attr("text-anchor", "middle")
             .attr("fill", "#666")
-            .attr("font-size", "14px")
+            .attr("font-size", "12px")
             .text("Tänään");
     }
     // TOOLTIP ------------------------------------------------------
