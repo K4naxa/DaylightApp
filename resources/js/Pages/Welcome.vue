@@ -209,7 +209,7 @@ const showSuggestionsDropdown = computed(
                     <!-- Error Message -->
                     <span
                         v-if="locationInputError"
-                        class="text-sm px-2 text-red-500 absolute"
+                        class="text-sm px-2 text-red-500 absolute -bottom-6"
                     >
                         {{ locationInputError }}
                     </span>
