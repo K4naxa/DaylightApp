@@ -196,7 +196,10 @@ const createChart = () => {
     // create line paths
     processedData.value.forEach((location, index) => {
         // draw lines normally if no location is hovered
-        if (!hoveredLocation.value)
+        if (
+            hoveredLocation.value === null ||
+            hoveredLocation.value === undefined
+        )
             svg.append("path")
                 .datum(location.value)
                 .attr("fill", "none")
@@ -376,6 +379,9 @@ const createChart = () => {
         });
 };
 
+// Define resizeObserver at component level
+let resizeObserver;
+
 // Create chart when component is mounted
 onMounted(() => {
     // get initial width for container
@@ -387,7 +393,7 @@ onMounted(() => {
     }
 
     // Make the chart responsive
-    const resizeObserver = new ResizeObserver((entries) => {
+    resizeObserver = new ResizeObserver((entries) => {
         if (entries[0]) {
             width = entries[0].contentRect.width;
             if (processedData.value.length > 0) {
@@ -402,7 +408,7 @@ onMounted(() => {
 });
 // Clean up the observer when component is unmounted
 onUnmounted(() => {
-    if (chartRef.value) {
+    if (chartRef.value && resizeObserver) {
         resizeObserver.unobserve(chartRef.value);
     }
 });
