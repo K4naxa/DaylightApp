@@ -175,17 +175,80 @@ const createChart = () => {
         .nice()
         .range([height - margin.bottom, margin.top]);
 
-    // axes (generates all ticks labes and lines)
-    const xAxis = d3.axisBottom(xScale).tickFormat(d3.timeFormat("%b")); // Show month abbreviations
+    // Create grid lines
+    const yGridLines = d3
+        .axisLeft(yScale)
+        .tickSize(-width + margin.left + margin.right)
+        .tickFormat("")
+        .ticks(5);
 
     svg.append("g")
-        .attr("transform", `translate(0, ${height - 50})`)
-        .call(xAxis);
+        .attr("class", "grid-lines")
+        .attr("transform", `translate(${margin.left}, 0)`)
+        .call(yGridLines)
+        .call((g) => g.select(".domain").remove()) // Remove axis line
+        .call((g) =>
+            g
+                .selectAll(".tick line")
+                .attr("stroke", "#e0e0e0")
+                .attr("stroke-opacity", 0.7)
+                .attr("shape-rendering", "crispEdges")
+        );
+
+    const xAxis = d3
+        .axisBottom(xScale)
+        .tickFormat((d) => {
+            const months = [
+                "Tammi",
+                "Helmi",
+                "Maalis",
+                "Huhti",
+                "Touko",
+                "Kesä",
+                "Heinä",
+                "Elo",
+                "Syys",
+                "Loka",
+                "Marras",
+                "Joulu",
+            ];
+            return months[d.getMonth()];
+        })
+        .tickSize(5)
+        .tickPadding(10);
+
+    svg.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0, ${height - margin.bottom})`)
+        .call(xAxis)
+        .call((g) => g.select(".domain").attr("stroke", "#ccc"))
+        .call((g) => g.selectAll(".tick line").attr("stroke", "#ccc"))
+        .call((g) =>
+            g
+                .selectAll(".tick text")
+                .attr("fill", "#666")
+                .attr("font-size", "12px")
+        );
 
     //  y-axis
-    const yAxis = d3.axisLeft(yScale).tickFormat((d) => `${d}h`);
+    const yAxis = d3
+        .axisLeft(yScale)
+        .tickFormat((d) => `${d}h`)
+        .tickSize(5)
+        .tickPadding(10);
 
-    svg.append("g").attr("transform", "translate(50, 0)").call(yAxis);
+    svg.append("g")
+        .attr("class", "y-axis")
+        .attr("transform", `translate(${margin.left}, 0)`)
+        .call(yAxis)
+        .call((g) => g.select(".domain").attr("stroke", "#ccc"))
+        .call((g) => g.selectAll(".tick line").attr("stroke", "#ccc"))
+        .call((g) =>
+            g
+                .selectAll(".tick text")
+                .attr("fill", "#666")
+                .attr("font-size", "12px")
+        );
 
     // line generator
     const line = d3
@@ -239,19 +302,14 @@ const createChart = () => {
         .attr("flood-color", "rgba(0,0,0,0.3)")
         .attr("flood-opacity", 0.5);
 
-    // axis labels
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", height - 10)
-        .attr("text-anchor", "middle")
-        .text("Kuukausi");
-
     svg.append("text")
         .attr("transform", "rotate(-90)")
         .attr("x", -height / 2)
-        .attr("y", margin.left / 3)
+        .attr("y", margin.left - 40)
         .attr("text-anchor", "middle")
-        .text("Tuntia päivänvaloa");
+        .attr("fill", "#666")
+        .attr("font-size", "14px")
+        .text("Valoisaa");
 
     // INTERESECTIONS -------------------------------------------
     svg.selectAll(".intersection-point")
@@ -272,7 +330,7 @@ const createChart = () => {
                 )} - ${d.hours.toFixed(1)}h`
         );
 
-    // CURRENTDATE LINE
+    // CURRENTDATE LINE --------------------------------------------------
 
     // Add current date line
     const currentDate = new Date();
@@ -286,7 +344,7 @@ const createChart = () => {
             .attr("x2", currentX)
             .attr("y1", margin.top)
             .attr("y2", height - margin.bottom)
-            .attr("stroke", "#aaa") // distinctive color
+            .attr("stroke", "#666")
             .attr("stroke-width", 1)
             .attr("stroke-dasharray", "5,3");
 
@@ -296,9 +354,8 @@ const createChart = () => {
             .attr("x", currentX)
             .attr("y", margin.top - 10)
             .attr("text-anchor", "middle")
-            .attr("fill", "#aaa")
-            .style("font-size", "12px")
-            .style("font-weight", "bold")
+            .attr("fill", "#666")
+            .attr("font-size", "14px")
             .text("Tänään");
     }
     // TOOLTIP ------------------------------------------------------
