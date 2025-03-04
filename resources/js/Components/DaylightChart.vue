@@ -116,8 +116,11 @@ const intersections = computed(() => {
 
 // Format time function for tooltip
 const formatTime = (date) => {
-    if (!date) return "24h daylight/darkness";
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    if (!date) return null;
+    return new Date(date).toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 };
 
 // Format date for tooltip header
@@ -508,8 +511,13 @@ watch(
                 minWidth: '150px',
             }"
         >
-            <div v-if="tooltipData.date" class="font-bold mb-2">
-                {{ formatDate(tooltipData.date) }}
+            <div v-if="tooltipData.date" class="mb-2">
+                {{
+                    new Date(tooltipData.date).toLocaleDateString("fi-FI", {
+                        day: "numeric",
+                        month: "long",
+                    })
+                }}
             </div>
 
             <div
@@ -524,10 +532,13 @@ watch(
                     ></div>
                     <span class="font-semibold">{{ data.name }}</span>
                 </div>
-                <div class="ml-5">
-                    Päivänvaloa: {{ data.hours.toFixed(1) }}h
-                </div>
-                <div class="flex gap-2">
+                <div class="ml-5">Valoisaa: {{ data.hours.toFixed(1) }}h</div>
+
+                <!-- show sunset/sunrise only if sunsets and rises  -->
+                <div
+                    v-if="data.hours !== 24 && data.hours !== 0"
+                    class="flex gap-2"
+                >
                     <div class="flex items-center">
                         <SunriseIcon class="w-4 h-4 mr-1" />
                         {{ formatTime(data.sunrise) }}

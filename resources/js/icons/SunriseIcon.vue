@@ -6,7 +6,7 @@
         viewBox="0 0 16 16"
         fill="none"
         stroke="#000"
-        stroke-width="2"
+        stroke-width="1"
         stroke-linecap="round"
         stroke-linejoin="round"
     >
