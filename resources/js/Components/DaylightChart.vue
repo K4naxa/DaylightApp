@@ -18,6 +18,8 @@ const props = defineProps({
 const chartRef = ref(null);
 const tooltipRef = ref(null);
 const hoveredLocation = ref(null);
+const showTodayMarker = ref(false);
+const showIntersections = ref(false);
 const tooltipData = reactive({
     visible: false,
     date: null,
@@ -189,9 +191,10 @@ const createChart = () => {
     drawGridLines(svg, xScale, yScale);
     drawAxes(svg, xScale, yScale);
     drawLines(svg, xScale, yScale);
-    drawIntersections(svg, xScale, yScale, dateExtent);
-    drawCurrentDateLine(svg, xScale, dateExtent);
     setupTooltip(svg, xScale, yScale);
+    if (showTodayMarker.value) drawCurrentDateLine(svg, xScale, dateExtent);
+    if (showIntersections.value && processedData.value.length > 1)
+        drawIntersections(svg, xScale, yScale, dateExtent);
 
     /**
      * Draws grid lines for the chart
@@ -590,7 +593,7 @@ onUnmounted(() => {
 
 // Redraw chart when data changes
 watch(
-    [processedData, hoveredLocation],
+    [processedData, hoveredLocation, showIntersections, showTodayMarker],
     () => {
         if (processedData.value.length > 0) {
             createChart();
@@ -602,8 +605,80 @@ watch(
 
 <template>
     <div class="lg:p-4 relative">
+        <!-- Top Helpers -->
+        <div
+            class="w-full md:pr-8 md:pl-12 flex justify-between flex-wrap mb-4 gap-2 transition-all duration-300 ease-in-out"
+        >
+            <!-- Chart control options -->
+            <div class="">
+                <div class="text-sm font-medium text-gray-700">Näytä:</div>
+                <div class="flex gap-4 items-center flex-wrap">
+                    <div class="flex items-center">
+                        <input
+                            type="checkbox"
+                            id="showTodayMarker"
+                            v-model="showTodayMarker"
+                            class="form-checkbox"
+                        />
+                        <label
+                            for="showTodayMarker"
+                            class="text-sm text-gray-700"
+                            >Tämäpäivä</label
+                        >
+                    </div>
+
+                    <div
+                        class="flex items-center"
+                        v-if="processedData.length > 1"
+                    >
+                        <input
+                            type="checkbox"
+                            id="showIntersections"
+                            v-model="showIntersections"
+                            class="form-checkbox"
+                        />
+                        <label
+                            for="showIntersections"
+                            class="text-sm text-gray-700"
+                            >Vastaavuudet</label
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <!-- Heatmap legend -->
+            <div v-if="processedData.length > 1 && showIntersections" class="">
+                <div class="text-sm font-medium text-gray-700 mb-1">
+                    Vastaavat valoisuudet
+                </div>
+                <div class="flex items-center gap-4 text-xs flex-wrap">
+                    <div class="flex items-center">
+                        <div
+                            class="w-4 h-4 rounded mr-2"
+                            style="background-color: rgba(255, 180, 180, 0.7)"
+                        ></div>
+                        <span>&#60; 30min</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div
+                            class="w-4 h-4 rounded mr-2"
+                            style="background-color: rgba(255, 120, 120, 0.7)"
+                        ></div>
+                        <span>&#60; 20min</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div
+                            class="w-4 h-4 rounded mr-2"
+                            style="background-color: rgba(255, 60, 60, 0.7)"
+                        ></div>
+                        <span>&#60; 10min</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Chart container -->
-        <div ref="chartRef" id="chart" class="w-full h-[400px]"></div>
+        <div ref="chartRef" id="chart" class="w-full h-[400px]" />
 
         <!-- Tooltip -->
         <div
@@ -688,6 +763,10 @@ watch(
 <style scoped>
 .deleteLocationButton {
     @apply cursor-pointer opacity-0 absolute w-full h-full bg-gray-50 bg-opacity-80 hover:opacity-100 rounded-full left-0 top-0 flex justify-center items-center;
+}
+
+.form-checkbox {
+    @apply rounded-sm h-4 w-4 text-indigo-600 mr-2;
 }
 
 .tooltip {
