@@ -24,9 +24,6 @@ class ImportCities extends Command
 
         $chunks = array_chunk($cities, 1000);
 
-        DB::statement('PRAGMA synchronous = OFF');
-        DB::statement('PRAGMA journal_mode = MEMORY');
-
         DB::table('cities')->truncate();
 
         $bar = $this->output->createProgressBar(count($cities));
