@@ -1,0 +1,15 @@
+services:
+    app:
+        image: k4na/daylight:latest
+        container_name: daylight_app
+        restart: unless-stopped
+        env_file:
+          - .env
+        ports:
+          - "8083:80"
+        volumes:
+          - ./storage:/var/www/html/storage
+          - ./public:/var/www/html/public
+volumes:
+    daylight_storage:
+    daylight_data:
