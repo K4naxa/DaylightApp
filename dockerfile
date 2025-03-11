@@ -32,7 +32,7 @@ WORKDIR /var/www/html
 
 # Copy composer files first for better caching
 COPY composer.json composer.lock ./
-RUN composer install --no-scripts --no-autoloader
+RUN composer install --no-scripts --no-autoloader --no-dev
 
 # Copy package files for npm
 COPY package*.json ./
@@ -52,8 +52,8 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 # Create entrypoint script
 RUN echo '#!/bin/bash\n\
-php artisan config:cache\n\
-php artisan route:cache\n\
+php artisan optimize:clear\n\
+php artisan optimize\n\
 apache2-foreground' > /usr/local/bin/entrypoint.sh && \
 chmod +x /usr/local/bin/entrypoint.sh
 
